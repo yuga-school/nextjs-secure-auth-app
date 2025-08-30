@@ -1,87 +1,36 @@
+// src/app/api/login/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/libs/prisma";
 import { loginRequestSchema } from "@/app/_types/LoginRequest";
+import bcrypt from "bcryptjs";
+import { createAccessToken, createRefreshToken } from "../_helper/tokens";
 import { userProfileSchema } from "@/app/_types/UserProfile";
-import type { UserProfile } from "@/app/_types/UserProfile";
-import type { ApiResponse } from "@/app/_types/ApiResponse";
-import { NextResponse, NextRequest } from "next/server";
-import { createSession } from "@/app/api/_helper/createSession";
-import { createJwt } from "@/app/api/_helper/createJwt";
-import { AUTH } from "@/config/auth";
 
-// キャッシュを無効化して毎回最新情報を取得
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
-
-export const POST = async (req: NextRequest) => {
+export async function POST(req: NextRequest) {
   try {
-    const result = loginRequestSchema.safeParse(await req.json());
-    if (!result.success) {
-      const res: ApiResponse<null> = {
-        success: false,
-        payload: null,
-        message: "リクエストボディの形式が不正です。",
-      };
-      return NextResponse.json(res);
-    }
-    const loginRequest = result.data;
+    const body = await req.json();
+    const { email, password } = loginRequestSchema.parse(body);
 
-    const user = await prisma.user.findUnique({
-      where: { email: loginRequest.email },
-    });
+    const user = await prisma.user.findUnique({ where: { email } });
+
     if (!user) {
-      // 💀 このアカウント（メールアドレス）の有効無効が分かってしまう。
-      const res: ApiResponse<null> = {
-        success: false,
-        payload: null,
-        message: "このメールアドレスは登録されていません。",
-        // message: "メールアドレスまたはパスワードの組み合わせが正しくありません。",
-      };
-      return NextResponse.json(res);
+      return NextResponse.json({ success: false, message: "メールアドレスまたはパスワードが正しくありません。" }, { status: 401 });
     }
 
-    // パスワードの検証
-    // ✍ bcrypt でハッシュ化したパスワードを検証ように書き換えよ。
-    const isValidPassword = user.password === loginRequest.password;
-    if (!isValidPassword) {
-      const res: ApiResponse<null> = {
-        success: false,
-        payload: null,
-        message:
-          "メールアドレスまたはパスワードの組み合わせが正しくありません。",
-      };
-      return NextResponse.json(res);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json({ success: false, message: "メールアドレスまたはパスワードが正しくありません。" }, { status: 401 });
     }
 
-    const tokenMaxAgeSeconds = 60 * 60 * 3; // 3時間
+    await createAccessToken({ userId: user.id, role: user.role });
+    await createRefreshToken(user.id);
+    
+    const userProfile = userProfileSchema.parse(user);
 
-    if (AUTH.isSession) {
-      // ■■ セッションベース認証の処理 ■■
-      await createSession(user.id, tokenMaxAgeSeconds);
-      const res: ApiResponse<UserProfile> = {
-        success: true,
-        payload: userProfileSchema.parse(user), // 余分なプロパティを削除
-        message: "",
-      };
-      return NextResponse.json(res);
-    } else {
-      // ■■ トークンベース認証の処理 ■■
-      const jwt = await createJwt(user, tokenMaxAgeSeconds);
-      const res: ApiResponse<string> = {
-        success: true,
-        payload: jwt,
-        message: "",
-      };
-      return NextResponse.json(res);
-    }
-  } catch (e) {
-    const errorMsg = e instanceof Error ? e.message : "Internal Server Error";
-    console.error(errorMsg);
-    const res: ApiResponse<null> = {
-      success: false,
-      payload: null,
-      message: "ログインのサーバサイドの処理に失敗しました。",
-    };
-    return NextResponse.json(res);
+    return NextResponse.json({ success: true, payload: userProfile });
+
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ success: false, message: "認証処理中にエラーが発生しました" }, { status: 500 });
   }
-};
+}
