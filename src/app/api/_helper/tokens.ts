@@ -1,4 +1,3 @@
-// src/app/api/_helper/tokens.ts
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { randomBytes, createHash } from "crypto";

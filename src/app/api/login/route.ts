@@ -1,4 +1,3 @@
-// src/app/api/login/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/libs/prisma";
 import { loginRequestSchema } from "@/app/_types/LoginRequest";

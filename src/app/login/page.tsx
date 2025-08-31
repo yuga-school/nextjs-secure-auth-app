@@ -119,6 +119,11 @@ const Page: React.FC = () => {
         <FontAwesomeIcon icon={faRightToBracket} className="mr-1.5" />
         Login
       </div>
+      <div className="mt-4 text-center">
+        <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+          パスワードを忘れた場合はこちら
+        </a>
+      </div>
       <form
         noValidate
         onSubmit={formMethods.handleSubmit(onSubmit)}
