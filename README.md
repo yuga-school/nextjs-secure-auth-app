@@ -151,7 +151,7 @@ sequenceDiagram
 
 ```bash
 # 1. リポジトリをクローン
-git clone https://github.com/[あなたのGitHubユーザー名]/[リポジトリ名].git
+git clone https://github.com/yuga-school/nextjs-secure-auth-app.git
 cd [リポジトリ名]
 
 # 2. 依存関係をインストール
