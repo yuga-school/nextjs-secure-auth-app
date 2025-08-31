@@ -1,64 +1,75 @@
 "use client";
 
-import { useAuth } from "@/app/_hooks/useAuth";
 import NextLink from "next/link";
-
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/_hooks/useAuth";
+import {
+  faRightFromBracket,
+  faRightToBracket,
+  faSpinner,
+  faUserPlus, // ★ サインアップ用アイコンをインポート
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChalkboardUser } from "@fortawesome/free-solid-svg-icons";
+import { Button } from "@/app/_components/Button";
 
-import { twMerge } from "tailwind-merge";
-import { AUTH } from "@/config/auth";
+export const Header = () => {
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
 
-export const Header: React.FC = () => {
-  const { userProfile, logout } = useAuth();
-  const router = useRouter();
+  const handleLogout = async () => {
+    await logout();
+    // ログアウト後にトップページなどにリダイレクト（任意）
+    window.location.href = "/";
+  };
 
   return (
-    <header>
-      <div className="bg-slate-800 py-2">
-        <div
-          className={twMerge(
-            "mx-4 max-w-3xl md:mx-auto",
-            "flex items-center justify-between",
-            "text-lg font-bold text-white",
-          )}
-        >
-          <div>
-            <NextLink href="/">
-              <FontAwesomeIcon icon={faChalkboardUser} className="mr-1.5" />
-              WebSecPlayground
-            </NextLink>
-            <span className="ml-1 text-xs font-normal">
-              {AUTH.isSession ? "- Session Auth" : "- JWT Auth"}
-            </span>
-          </div>
-          {userProfile ? (
-            <div className="ml-2 text-sm text-slate-400">
-              <div className="flex items-center gap-x-2">
-                <div className="text-slate-200">{userProfile.name}</div>
-                <div
-                  className={twMerge("cursor-pointer hover:text-white")}
-                  onClick={logout}
-                >
-                  ログアウト
-                </div>
-              </div>
+    <header className="bg-slate-800 p-4 text-white">
+      <div className="mx-auto flex max-w-3xl items-center justify-between">
+        <NextLink href="/" className="text-xl font-bold">
+          Secure App
+        </NextLink>
+
+        <nav>
+          {isLoading ? (
+            // ローディング中はスピナーを表示
+            <FontAwesomeIcon icon={faSpinner} spin />
+          ) : isAuthenticated && user ? (
+            // ログイン済みの場合
+            <div className="flex items-center gap-x-4">
+              <span>{user.name} さん</span>
+              <Button
+                variant="light"
+                onClick={handleLogout}
+                className="flex items-center gap-x-1.5"
+              >
+                <FontAwesomeIcon icon={faRightFromBracket} />
+                ログアウト
+              </Button>
             </div>
           ) : (
-            <div
-              className={twMerge(
-                "ml-2 text-sm text-slate-400",
-                "cursor-pointer hover:text-white",
-              )}
-              onClick={() => {
-                router.push("/login");
-              }}
-            >
-              ログイン
+            // 未ログインの場合
+            <div className="flex items-center gap-x-2">
+              {/* ★★★ ここからが追加箇所 ★★★ */}
+              <NextLink href="/signup">
+                <Button
+                  variant="ghost"
+                  className="flex items-center gap-x-1.5"
+                >
+                  <FontAwesomeIcon icon={faUserPlus} />
+                  サインアップ
+                </Button>
+              </NextLink>
+              {/* ★★★ ここまでが追加箇所 ★★★ */}
+              <NextLink href="/login">
+                <Button
+                  variant="light"
+                  className="flex items-center gap-x-1.5"
+                >
+                  <FontAwesomeIcon icon={faRightToBracket} />
+                  ログイン
+                </Button>
+              </NextLink>
             </div>
           )}
-        </div>
+        </nav>
       </div>
     </header>
   );

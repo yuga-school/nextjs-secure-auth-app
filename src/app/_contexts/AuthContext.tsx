@@ -1,65 +1,79 @@
 "use client";
 
-import React, { useState, useEffect, createContext } from "react";
+import { createContext, useState, useEffect, useCallback, ReactNode } from "react";
+import type { LoginRequest } from "@/app/_types/LoginRequest";
 import type { UserProfile } from "@/app/_types/UserProfile";
-import useSWR, { mutate } from "swr";
-import type { ApiResponse } from "../_types/ApiResponse";
-import { jwtFetcher } from "./jwtFetcher";
-import { sessionFetcher } from "./sessionFetcher";
-import { AUTH } from "@/config/auth";
+import { fetchUserProfile } from "./sessionFetcher";
+import toast from "react-hot-toast";
 
-interface AuthContextProps {
-  userProfile: UserProfile | null;
-  logout: () => Promise<boolean>;
-}
+export type AuthContextProps = {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  user: UserProfile | null;
+  login: (loginRequest: LoginRequest) => Promise<UserProfile | null>;
+  logout: () => Promise<void>;
+};
 
-export const AuthContext = createContext<AuthContextProps | undefined>(
-  undefined,
-);
+export const AuthContext = createContext<AuthContextProps>({
+  isAuthenticated: false,
+  isLoading: true,
+  user: null,
+  login: async () => null,
+  logout: async () => {},
+});
 
-interface Props {
-  children: React.ReactNode;
-}
+type AuthProviderProps = {
+  children: ReactNode;
+};
 
-const AuthProvider: React.FC<Props> = ({ children }) => {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const { data: session } = useSWR<ApiResponse<UserProfile | null>>(
-    "/api/auth",
-    AUTH.isSession ? sessionFetcher : jwtFetcher,
-  );
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (session && session.success) {
-      setUserProfile(session.payload);
-      return;
-    }
-    setUserProfile(null);
-  }, [session]);
+    const checkAuthStatus = async () => {
+      setIsLoading(true);
+      try {
+        const userProfile = await fetchUserProfile();
+        setUser(userProfile);
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkAuthStatus();
+  }, []);
 
-  const logout = async () => {
-    if (AUTH.isSession) {
-      // ■■ セッションベース認証 ■■
-      // → バックエンドにログアウトリクエストを送信してセッションを破棄
-      await fetch("/api/logout", {
-        method: "DELETE",
-        credentials: "same-origin",
-      });
+  const login = useCallback(async (loginRequest: LoginRequest): Promise<UserProfile | null> => {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(loginRequest),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      setUser(data.payload);
+      return data.payload;
     } else {
-      // ■■ トークンベース認証 ■■
-      // ローカルストレージから jwt を削除
-      localStorage.removeItem("jwt");
+      setUser(null);
+      throw new Error(data.message || "ログインに失敗しました。");
     }
-    // SWR キャッシュを無効化
-    mutate(() => true, undefined, { revalidate: false });
-    setUserProfile(null);
-    return true;
-  };
+  }, []);
+
+  const logout = useCallback(async () => {
+    await fetch("/api/logout", { method: "POST" });
+    setUser(null);
+    toast.success("ログアウトしました。");
+    window.location.href = "/login";
+  }, []);
+
+  const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ userProfile, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
-
-export default AuthProvider;

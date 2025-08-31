@@ -15,13 +15,14 @@ export interface UserPayload {
 
 // アクセストークンを生成してHttpOnly Cookieにセット
 export const createAccessToken = async (payload: UserPayload) => {
-  const token = await new SignJWT(payload)
+  const token = await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(ACCESS_TOKEN_EXPIRATION)
     .sign(secretKey);
 
-  cookies().set("access_token", token, {
+  const cookieStore = await cookies();
+  cookieStore.set("access_token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -46,8 +47,8 @@ export const createRefreshToken = async (userId: string) => {
       hashedToken,
     },
   });
-
-  cookies().set("refresh_token", refreshToken, {
+  const cookieStore = await cookies();
+  cookieStore.set("refresh_token", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -56,14 +57,14 @@ export const createRefreshToken = async (userId: string) => {
   });
 };
 
-// アクセストークンを検証
 export const verifyAccessToken = async (): Promise<UserPayload | null> => {
-  const token = cookies().get("access_token")?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get("access_token")?.value;
   if (!token) return null;
 
   try {
     const { payload } = await jwtVerify(token, secretKey);
-    return payload as UserPayload;
+    return payload as unknown as UserPayload;
   } catch (error) {
     return null;
   }

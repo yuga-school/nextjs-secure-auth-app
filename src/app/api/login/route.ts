@@ -4,6 +4,7 @@ import { loginRequestSchema } from "@/app/_types/LoginRequest";
 import bcrypt from "bcryptjs";
 import { createAccessToken, createRefreshToken } from "../_helper/tokens";
 import { userProfileSchema } from "@/app/_types/UserProfile";
+import { Role } from "@/app/_types/Role"; // Roleをインポート
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME_MINUTES = 15;
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
           where: { email },
           data: {
             failedLoginAttempts: newFailedAttempts,
-            lockedUntil: lockedUntil,
+            lockedUntil: lockedUntil.toISOString(), // .toISOString() を追加
           },
         });
         return NextResponse.json(
@@ -72,9 +73,10 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    await createAccessToken({ userId: user.id, role: user.role });
+    await createAccessToken({ userId: user.id, role: user.role as Role });
     await createRefreshToken(user.id);
-    const ipAddress = req.ip ?? req.headers.get("x-forwarded-for") ?? "Unknown";
+    
+    const ipAddress = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "Unknown";
     const userAgent = req.headers.get("user-agent") ?? "Unknown";
 
     await prisma.loginHistory.create({
@@ -84,6 +86,7 @@ export async function POST(req: NextRequest) {
         userAgent,
       },
     });
+    
     const userProfile = userProfileSchema.parse(user);
 
     return NextResponse.json({ success: true, payload: userProfile });

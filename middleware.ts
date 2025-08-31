@@ -7,17 +7,26 @@ const rateLimiter = new RateLimiterMemory({
 });
 
 export async function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname === "/api/login" || request.nextUrl.pathname === "/api/auth/request-password-reset") {
-    const ip = request.ip ?? "127.0.0.1";
+  const pathname = request.nextUrl.pathname;
+
+  // 対象のAPIパスかどうかを判定
+  if (pathname === "/api/login" || pathname === "/api/auth/request-password-reset") {
+    
+    const ip = (request.headers.get("x-forwarded-for") ?? "127.0.0.1").split(',')[0].trim();
+
     try {
       await rateLimiter.consume(ip);
     } catch (error) {
+      // レートリミットを超えた場合は 429 Too Many Requests を返す
       return new NextResponse("Too Many Requests", { status: 429 });
     }
   }
+  
+  // 対象外のパスはそのまま処理を続行
   return NextResponse.next();
 }
 
 export const config = {
+  // matcherに対象パスを指定することで、不要なミドルウェアの実行を防ぐ
   matcher: ["/api/login", "/api/auth/request-password-reset"],
 };

@@ -16,18 +16,21 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
-      // ユーザーが存在しない場合でも、成功したかのように見せかける
+      // ユーザーが存在しない場合でも、攻撃者にヒントを与えないため成功したかのように見せかける
       return NextResponse.json({ success: true, message: "パスワードリセット用のメールを送信しました。" });
     }
 
     const resetToken = randomBytes(32).toString("hex");
     const hashedResetToken = createHash("sha256").update(resetToken).digest("hex");
 
+    const expires = new Date(Date.now() + 3600000); // 1時間有効
+
     await prisma.user.update({
       where: { email },
       data: {
         passwordResetToken: hashedResetToken,
-        passwordResetTokenExpires: new Date(Date.now() + 3600000), // 1時間有効
+        // new Date() を .toISOString() で文字列に変換する
+        passwordResetTokenExpires: expires.toISOString(),
       },
     });
 

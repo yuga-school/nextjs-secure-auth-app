@@ -1,60 +1,56 @@
-import React from "react";
-import { ReactNode, ComponentPropsWithRef } from "react";
-import { tv, type VariantProps } from "tailwind-variants";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+// src/app/_components/Button.tsx
+"use client";
 
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { tv, type VariantProps } from "tailwind-variants";
+import { twMerge } from "tailwind-merge";
+
+// 1. ボタンのスタイルバリエーションを定義
 const button = tv({
-  base: "flex items-center justify-center rounded-md px-4 py-2 font-bold text-white transition-colors focus:outline-none focus:ring-2",
+  base: "inline-flex items-center justify-center rounded-md px-4 py-2 font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
   variants: {
     variant: {
-      indigo: "bg-indigo-400 hover:bg-indigo-600 focus:ring-indigo-200",
+      indigo: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500",
+      light: "bg-slate-200 text-slate-800 hover:bg-slate-300 focus:ring-slate-400",
+      ghost: "bg-transparent text-white hover:bg-slate-700 focus:ring-slate-500",
     },
     width: {
-      auto: "",
+      auto: "w-auto",
       stretch: "w-full",
-      slim: "px-3 py-1",
-    },
-    disabled: {
-      true: "cursor-not-allowed opacity-50",
-    },
-    isBusy: {
-      true: "cursor-wait opacity-50",
     },
   },
   defaultVariants: {
     variant: "indigo",
     width: "auto",
-    disabled: false,
-    isBusy: false,
   },
 });
 
-interface Props
-  extends Omit<ComponentPropsWithRef<"button">, "className">,
-    VariantProps<typeof button> {
-  children?: ReactNode;
-  className?: string;
-  isBusy?: boolean;
-}
+// 2. Propsの型定義を拡張
+export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof button> & {
+    isBusy?: boolean;
+  };
 
-export const Button = (props: Props) => {
-  const { children, variant, width, disabled, isBusy, className, ...rest } =
-    props;
-
+// 3. Buttonコンポーネントの実装
+export const Button: React.FC<ButtonProps> = ({
+  variant,
+  width,
+  isBusy = false,
+  className,
+  children,
+  ...props
+}) => {
   return (
     <button
-      className={button({ variant, width, disabled, isBusy, class: className })}
-      disabled={disabled || isBusy}
-      {...rest}
+      {...props}
+      className={twMerge(button({ variant, width }), className)}
+      disabled={isBusy || props.disabled}
     >
-      <div>
-        {isBusy && (
-          <FontAwesomeIcon icon={faSpinner} className="mr-2 animate-spin" />
-        )}
-        {children}
-        {isBusy && <span>中...</span>}
-      </div>
+      {isBusy ? (
+        <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+      ) : null}
+      {children}
     </button>
   );
 };
