@@ -3,8 +3,6 @@
 # db
 /prisma/app.db
 
-# docs
-/docs
 
 # dependencies
 /node_modules
