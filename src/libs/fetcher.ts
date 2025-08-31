@@ -1,5 +1,5 @@
 let isRefreshing = false;
-let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: any) => void; }[] = [];
+let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: unknown) => void; }[] = [];
 
 const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue.forEach(prom => {
@@ -13,7 +13,7 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 };
 
 export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  let res = await fetch(url, options);
+  const res = await fetch(url, options);
 
   if (res.status === 401) {
     if (isRefreshing) {

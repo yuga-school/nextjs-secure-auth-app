@@ -19,7 +19,7 @@ export default function HistoryPage() {
     const fetchHistory = async () => {
       setLoading(true);
       try {
-        const res = await fetchWithAuth("/api/user/login-history");
+        const res = await fetchWithAuth("/api/user/login-history") as Response;
         if (res.ok) {
           const data = await res.json();
           setHistories(data.payload);

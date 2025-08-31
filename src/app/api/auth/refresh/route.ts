@@ -6,7 +6,8 @@ import { createAccessToken, createRefreshToken } from "../../_helper/tokens";
 import { Role } from "@/app/_types/Role";
 
 export async function POST(req: NextRequest) {
-  const refreshToken = cookies().get("refresh_token")?.value;
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get("refresh_token")?.value;
   if (!refreshToken) {
     return NextResponse.json({ success: false, message: "Refresh token not found." }, { status: 401 });
   }
@@ -29,8 +30,8 @@ export async function POST(req: NextRequest) {
         });
       }
       // Cookieを削除
-      cookies().set("access_token", "", { expires: new Date(0) });
-      cookies().set("refresh_token", "", { expires: new Date(0) });
+      cookieStore.set("access_token", "", { expires: new Date(0) });
+      cookieStore.set("refresh_token", "", { expires: new Date(0) });
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 

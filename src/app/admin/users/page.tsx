@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react';
 import { fetchWithAuth } from '@/libs/fetcher';
 import { UserProfile } from '@/app/_types/UserProfile';
 
-type AdminUserView = Pick<UserProfile, 'id' | 'email' | 'name' | 'role' | 'createdAt'> & {
-  lockedUntil: string | null;
-};
+// UserProfileから必要なキーをPickする。`createdAt`と`lockedUntil`も含まれるようになった。
+type AdminUserView = Pick<UserProfile, 'id' | 'email' | 'name' | 'role' | 'createdAt' | 'lockedUntil'>;
 
 const AdminUsersPage = () => {
   const [users, setUsers] = useState<AdminUserView[]>([]);
@@ -18,12 +17,19 @@ const AdminUsersPage = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await fetchWithAuth('/api/admin/users');
+        const res = await fetchWithAuth('/api/admin/users') as Response;
         if (!res.ok) {
-          throw new Error('ユーザー情報の取得に失敗しました。');
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'ユーザー情報の取得に失敗しました。');
         }
         const data = await res.json();
-        setUsers(data.payload);
+        // APIからのデータは日付が文字列になっているため、Dateオブジェクトに変換
+        const formattedUsers = data.payload.map((user: AdminUserView) => ({
+          ...user,
+          createdAt: user.createdAt ? new Date(user.createdAt) : null,
+          lockedUntil: user.lockedUntil ? new Date(user.lockedUntil) : null,
+        }));
+        setUsers(formattedUsers);
       } catch (err) {
         setError(err instanceof Error ? err.message : '不明なエラーが発生しました。');
       } finally {
@@ -33,8 +39,8 @@ const AdminUsersPage = () => {
     getUsers();
   }, []);
 
-  if (isLoading) return <div>読み込み中...</div>;
-  if (error) return <div className="text-red-500">エラー: {error}</div>;
+  if (isLoading) return <div className="text-center p-8">読み込み中...</div>;
+  if (error) return <div className="text-red-500 text-center p-8">エラー: {error}</div>;
 
   return (
     <div>
@@ -60,7 +66,7 @@ const AdminUsersPage = () => {
                     {user.role}
                   </span>
                 </td>
-                <td className="py-2 px-4 border-b">{new Date(user.createdAt).toLocaleDateString()}</td>
+                <td className="py-2 px-4 border-b">{user.createdAt?.toLocaleDateString("ja-JP")}</td>
                 <td className="py-2 px-4 border-b">
                   {user.lockedUntil && new Date(user.lockedUntil) > new Date() ? (
                     <span className="text-red-500 font-bold">ロック中</span>
