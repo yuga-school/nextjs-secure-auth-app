@@ -74,7 +74,16 @@ export async function POST(req: NextRequest) {
     
     await createAccessToken({ userId: user.id, role: user.role });
     await createRefreshToken(user.id);
-    
+    const ipAddress = req.ip ?? req.headers.get("x-forwarded-for") ?? "Unknown";
+    const userAgent = req.headers.get("user-agent") ?? "Unknown";
+
+    await prisma.loginHistory.create({
+      data: {
+        userId: user.id,
+        ipAddress,
+        userAgent,
+      },
+    });
     const userProfile = userProfileSchema.parse(user);
 
     return NextResponse.json({ success: true, payload: userProfile });

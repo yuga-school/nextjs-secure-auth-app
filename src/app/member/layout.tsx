@@ -31,6 +31,12 @@ const Layout: React.FC<Props> = (props) => {
           </NextLink>
           してください。
         </div>
+        <nav>
+          <ul className="flex space-x-4">
+            <li><a href="/member/about" className="hover:underline">プロフィール</a></li>
+            <li><a href="/member/history" className="hover:underline">ログイン履歴</a></li>
+          </ul>
+        </nav>
       </main>
     );
 
